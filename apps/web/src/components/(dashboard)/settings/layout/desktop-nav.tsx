@@ -5,7 +5,7 @@ import type { HTMLAttributes } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { Braces, CreditCard, Lock, User, Users, Webhook } from 'lucide-react';
+import { Braces, Building, CreditCard, Lock, User, Users, Webhook } from 'lucide-react';
 
 import { useFeatureFlags } from '@documenso/lib/client-only/providers/feature-flag';
 import { cn } from '@documenso/ui/lib/utils';
@@ -32,6 +32,19 @@ export const DesktopNav = ({ className, ...props }: DesktopNavProps) => {
         >
           <User className="mr-2 h-5 w-5" />
           Profile
+        </Button>
+      </Link>
+
+      <Link href="/settings/organisations">
+        <Button
+          variant="ghost"
+          className={cn(
+            'w-full justify-start',
+            pathname?.startsWith('/settings/organisations') && 'bg-secondary',
+          )}
+        >
+          <Building className="mr-2 h-5 w-5" />
+          Organisations
         </Button>
       </Link>
 

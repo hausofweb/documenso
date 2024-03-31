@@ -3,7 +3,13 @@ import { hash } from '@node-rs/bcrypt';
 import { getStripeCustomerByUser } from '@documenso/ee/server-only/stripe/get-customer';
 import { updateSubscriptionItemQuantity } from '@documenso/ee/server-only/stripe/update-subscription-item-quantity';
 import { prisma } from '@documenso/prisma';
-import { IdentityProvider, Prisma, TeamMemberInviteStatus } from '@documenso/prisma/client';
+import {
+  IdentityProvider,
+  InviteStatus,
+  OrganisationMemberStatus,
+  Prisma,
+  TeamMemberInviteStatus,
+} from '@documenso/prisma/client';
 
 import { IS_BILLING_ENABLED } from '../../constants/app';
 import { SALT_ROUNDS } from '../../constants/auth';
@@ -57,76 +63,119 @@ export const createUser = async ({ name, email, password, signature, url }: Crea
     },
   });
 
-  const acceptedTeamInvites = await prisma.teamMemberInvite.findMany({
-    where: {
-      email: {
-        equals: email,
-        mode: Prisma.QueryMode.insensitive,
+  const [acceptedTeamInvites, acceptedOrganisationInvites] = await Promise.all([
+    prisma.teamMemberInvite.findMany({
+      where: {
+        email: {
+          equals: email,
+          mode: Prisma.QueryMode.insensitive,
+        },
+        status: TeamMemberInviteStatus.ACCEPTED,
       },
-      status: TeamMemberInviteStatus.ACCEPTED,
-    },
-  });
+    }),
+    prisma.organisationMemberInvite.findMany({
+      where: {
+        email: {
+          equals: email,
+          mode: Prisma.QueryMode.insensitive,
+        },
+        status: InviteStatus.ACCEPTED,
+      },
+    }),
+  ]);
 
-  // For each team invite, add the user to the team and delete the team invite.
+  // For each org/team invite, add the user to the org/team and delete the invite.
   // If an error occurs, reset the invitation to not accepted.
   await Promise.allSettled(
-    acceptedTeamInvites.map(async (invite) =>
-      prisma
-        .$transaction(
-          async (tx) => {
-            await tx.teamMember.create({
+    [
+      acceptedTeamInvites.map(async (invite) =>
+        prisma
+          .$transaction(
+            async (tx) => {
+              await tx.teamMember.create({
+                data: {
+                  teamId: invite.teamId,
+                  userId: user.id,
+                  role: invite.role,
+                },
+              });
+
+              await tx.teamMemberInvite.delete({
+                where: {
+                  id: invite.id,
+                },
+              });
+
+              if (!IS_BILLING_ENABLED()) {
+                return;
+              }
+
+              const team = await tx.team.findFirstOrThrow({
+                where: {
+                  id: invite.teamId,
+                },
+                include: {
+                  members: {
+                    select: {
+                      id: true,
+                    },
+                  },
+                  subscription: true,
+                },
+              });
+
+              if (team.subscription) {
+                await updateSubscriptionItemQuantity({
+                  priceId: team.subscription.priceId,
+                  subscriptionId: team.subscription.planId,
+                  quantity: team.members.length,
+                });
+              }
+            },
+            { timeout: 30_000 },
+          )
+          .catch(async () => {
+            await prisma.teamMemberInvite.update({
+              where: {
+                id: invite.id,
+              },
               data: {
-                teamId: invite.teamId,
+                status: TeamMemberInviteStatus.PENDING,
+              },
+            });
+          }),
+      ),
+      acceptedOrganisationInvites.map(async (invite) =>
+        prisma
+          .$transaction(async (tx) => {
+            await tx.organisationMember.create({
+              data: {
+                name: user.name ?? '',
+                status: OrganisationMemberStatus.ACTIVE,
+                organisationId: invite.organisationId,
                 userId: user.id,
                 role: invite.role,
               },
             });
 
-            await tx.teamMemberInvite.delete({
+            await tx.organisationMemberInvite.delete({
               where: {
                 id: invite.id,
               },
             });
-
-            if (!IS_BILLING_ENABLED()) {
-              return;
-            }
-
-            const team = await tx.team.findFirstOrThrow({
+          })
+          .catch(async () => {
+            await prisma.organisationMemberInvite.update({
               where: {
-                id: invite.teamId,
+                id: invite.id,
               },
-              include: {
-                members: {
-                  select: {
-                    id: true,
-                  },
-                },
-                subscription: true,
+              data: {
+                status: InviteStatus.PENDING,
               },
             });
-
-            if (team.subscription) {
-              await updateSubscriptionItemQuantity({
-                priceId: team.subscription.priceId,
-                subscriptionId: team.subscription.planId,
-                quantity: team.members.length,
-              });
-            }
-          },
-          { timeout: 30_000 },
-        )
-        .catch(async () => {
-          await prisma.teamMemberInvite.update({
-            where: {
-              id: invite.id,
-            },
-            data: {
-              status: TeamMemberInviteStatus.PENDING,
-            },
-          });
-        }),
-    ),
+          }),
+      ),
+    ].flat(),
   );
 
   // Update the user record with a new or existing Stripe customer record.

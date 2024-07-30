@@ -20,6 +20,10 @@ import {
   DocumentGlobalAuthActionTooltip,
 } from '@documenso/ui/components/document/document-global-auth-action-select';
 import {
+  DocumentVisibilitySelect,
+  DocumentVisibilityTooltip,
+} from '@documenso/ui/components/document/document-visibility-select';
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -33,6 +37,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@documenso/ui/primitives/form/form';
+
+import { useOptionalCurrentTeam } from '~/providers/team';
 
 import { Combobox } from '../combobox';
 import { Input } from '../input';
@@ -74,11 +80,14 @@ export const AddSettingsFormPartial = ({
     documentAuth: document.authOptions,
   });
 
+  const isTeam = useOptionalCurrentTeam();
+
   const form = useForm<TAddSettingsFormSchema>({
     resolver: zodResolver(ZAddSettingsFormSchema),
     defaultValues: {
       title: document.title,
       externalId: document.externalId || '',
+      documentVisibility: '',
       globalAccessAuth: documentAuthOption?.globalAccessAuth || undefined,
       globalActionAuth: documentAuthOption?.globalActionAuth || undefined,
       meta: {
@@ -170,6 +179,25 @@ export const AddSettingsFormPartial = ({
                 </FormItem>
               )}
             />
+
+            {isTeam && (
+              <FormField
+                control={form.control}
+                name="documentVisibility"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex flex-row items-center">
+                      Document visibility
+                      <DocumentVisibilityTooltip />
+                    </FormLabel>
+
+                    <FormControl>
+                      <DocumentVisibilitySelect {...field} onValueChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
 
             {isDocumentEnterprise && (
               <FormField

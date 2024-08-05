@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import { DATE_FORMATS, DEFAULT_DOCUMENT_DATE_FORMAT } from '@documenso/lib/constants/date-formats';
 import { DEFAULT_DOCUMENT_TIME_ZONE, TIME_ZONES } from '@documenso/lib/constants/time-zones';
 import { extractDocumentAuthMethods } from '@documenso/lib/utils/document-auth';
+import type { TeamMemberRole } from '@documenso/prisma/client';
 import { DocumentStatus, type Field, type Recipient, SendStatus } from '@documenso/prisma/client';
 import type { DocumentWithData } from '@documenso/prisma/types/document-with-data';
 import {
@@ -38,8 +39,6 @@ import {
   FormMessage,
 } from '@documenso/ui/primitives/form/form';
 
-import { useOptionalCurrentTeam } from '~/providers/team';
-
 import { Combobox } from '../combobox';
 import { Input } from '../input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select';
@@ -64,6 +63,7 @@ export type AddSettingsFormProps = {
   isDocumentEnterprise: boolean;
   isDocumentPdfLoaded: boolean;
   document: DocumentWithData;
+  currentTeamMemberRole?: TeamMemberRole;
   onSubmit: (_data: TAddSettingsFormSchema) => void;
 };
 
@@ -74,13 +74,12 @@ export const AddSettingsFormPartial = ({
   isDocumentEnterprise,
   isDocumentPdfLoaded,
   document,
+  currentTeamMemberRole,
   onSubmit,
 }: AddSettingsFormProps) => {
   const { documentAuthOption } = extractDocumentAuthMethods({
     documentAuth: document.authOptions,
   });
-
-  const isTeam = useOptionalCurrentTeam();
 
   const form = useForm<TAddSettingsFormSchema>({
     resolver: zodResolver(ZAddSettingsFormSchema),
@@ -180,7 +179,7 @@ export const AddSettingsFormPartial = ({
               )}
             />
 
-            {isTeam && (
+            {currentTeamMemberRole && (
               <FormField
                 control={form.control}
                 name="visibility"
@@ -193,7 +192,7 @@ export const AddSettingsFormPartial = ({
 
                     <FormControl>
                       <DocumentVisibilitySelect
-                        currentMemberRole={isTeam?.currentTeamMember?.role}
+                        currentMemberRole={currentTeamMemberRole}
                         {...field}
                         onValueChange={field.onChange}
                       />

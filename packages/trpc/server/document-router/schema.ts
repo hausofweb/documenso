@@ -173,6 +173,11 @@ export const ZDownloadAuditLogsMutationSchema = z.object({
   teamId: z.number().optional(),
 });
 
+export const ZDownloadCertificateMutationSchema = z.object({
+  documentId: z.number(),
+  teamId: z.number().optional(),
+});
+
 export const ZMoveDocumentsToTeamSchema = z.object({
   documentId: z.number(),
   teamId: z.number(),

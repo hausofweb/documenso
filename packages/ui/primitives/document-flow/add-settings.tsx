@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Trans } from '@lingui/macro';
 import { InfoIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
@@ -148,7 +149,9 @@ export const AddSettingsFormPartial = ({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>Title</FormLabel>
+                  <FormLabel required>
+                    <Trans>Title</Trans>
+                  </FormLabel>
 
                   <FormControl>
                     <Input
@@ -168,7 +171,7 @@ export const AddSettingsFormPartial = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex flex-row items-center">
-                    Document access
+                    <Trans>Document access</Trans>
                     <DocumentGlobalAuthAccessTooltip />
                   </FormLabel>
 
@@ -209,7 +212,7 @@ export const AddSettingsFormPartial = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex flex-row items-center">
-                      Recipient action authentication
+                      <Trans>Recipient action authentication</Trans>
                       <DocumentGlobalAuthActionTooltip />
                     </FormLabel>
 
@@ -224,7 +227,7 @@ export const AddSettingsFormPartial = ({
             <Accordion type="multiple" className="mt-6">
               <AccordionItem value="advanced-options" className="border-none">
                 <AccordionTrigger className="text-foreground mb-2 rounded border px-3 py-2 text-left hover:bg-neutral-200/30 hover:no-underline">
-                  Advanced Options
+                  <Trans>Advanced Options</Trans>
                 </AccordionTrigger>
 
                 <AccordionContent className="text-muted-foreground -mx-1 px-1 pt-2 text-sm leading-relaxed">
@@ -235,15 +238,17 @@ export const AddSettingsFormPartial = ({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex flex-row items-center">
-                            External ID{' '}
+                            <Trans>External ID</Trans>{' '}
                             <Tooltip>
                               <TooltipTrigger>
                                 <InfoIcon className="mx-2 h-4 w-4" />
                               </TooltipTrigger>
 
                               <TooltipContent className="text-muted-foreground max-w-xs">
-                                Add an external ID to the document. This can be used to identify the
-                                document in external systems.
+                                <Trans>
+                                  Add an external ID to the document. This can be used to identify
+                                  the document in external systems.
+                                </Trans>
                               </TooltipContent>
                             </Tooltip>
                           </FormLabel>
@@ -262,7 +267,9 @@ export const AddSettingsFormPartial = ({
                       name="meta.dateFormat"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Date Format</FormLabel>
+                          <FormLabel>
+                            <Trans>Date Format</Trans>
+                          </FormLabel>
 
                           <FormControl>
                             <Select
@@ -294,7 +301,9 @@ export const AddSettingsFormPartial = ({
                       name="meta.timezone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Time Zone</FormLabel>
+                          <FormLabel>
+                            <Trans>Time Zone</Trans>
+                          </FormLabel>
 
                           <FormControl>
                             <Combobox
@@ -317,14 +326,16 @@ export const AddSettingsFormPartial = ({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex flex-row items-center">
-                            Redirect URL{' '}
+                            <Trans>Redirect URL</Trans>{' '}
                             <Tooltip>
                               <TooltipTrigger>
                                 <InfoIcon className="mx-2 h-4 w-4" />
                               </TooltipTrigger>
 
                               <TooltipContent className="text-muted-foreground max-w-xs">
-                                Add a URL to redirect the user to once the document is signed
+                                <Trans>
+                                  Add a URL to redirect the user to once the document is signed
+                                </Trans>
                               </TooltipContent>
                             </Tooltip>
                           </FormLabel>
@@ -346,11 +357,7 @@ export const AddSettingsFormPartial = ({
       </DocumentFlowFormContainerContent>
 
       <DocumentFlowFormContainerFooter>
-        <DocumentFlowFormContainerStep
-          title={documentFlow.title}
-          step={currentStep}
-          maxStep={totalSteps}
-        />
+        <DocumentFlowFormContainerStep step={currentStep} maxStep={totalSteps} />
 
         <DocumentFlowFormContainerActions
           loading={form.formState.isSubmitting}

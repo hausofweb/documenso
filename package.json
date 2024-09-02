@@ -4,6 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "build:web": "turbo run build --filter=@documenso/web",
+    "postbuild": "npm run prisma:migrate-deploy",
     "dev": "turbo run dev --filter=@documenso/web",
     "dev:web": "turbo run dev --filter=@documenso/web",
     "dev:marketing": "turbo run dev --filter=@documenso/marketing",

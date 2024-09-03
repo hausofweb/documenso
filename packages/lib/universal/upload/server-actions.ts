@@ -20,7 +20,7 @@ import { ONE_HOUR, ONE_SECOND } from '../../constants/time';
 import { alphaid } from '../id';
 
 export const getPresignPostUrl = async (fileName: string, contentType: string) => {
-  const client = getS3Client();
+  const client = await getS3Client();
 
   const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
 
@@ -61,7 +61,7 @@ export const getPresignPostUrl = async (fileName: string, contentType: string) =
 };
 
 export const getAbsolutePresignPostUrl = async (key: string) => {
-  const client = getS3Client();
+  const client = await getS3Client();
 
   const { getSignedUrl: getS3SignedUrl } = await import('@aws-sdk/s3-request-presigner');
 
@@ -93,7 +93,7 @@ export const getPresignGetUrl = async (key: string) => {
     return { key, url };
   }
 
-  const client = getS3Client();
+  const client = await getS3Client();
 
   const { getSignedUrl: getS3SignedUrl } = await import('@aws-sdk/s3-request-presigner');
 
@@ -110,7 +110,7 @@ export const getPresignGetUrl = async (key: string) => {
 };
 
 export const deleteS3File = async (key: string) => {
-  const client = getS3Client();
+  const client = await getS3Client();
 
   await client.send(
     new DeleteObjectCommand({
@@ -120,7 +120,7 @@ export const deleteS3File = async (key: string) => {
   );
 };
 
-const getS3Client = () => {
+const getS3Client = async () => {
   const NEXT_PUBLIC_UPLOAD_TRANSPORT = env('NEXT_PUBLIC_UPLOAD_TRANSPORT');
 
   if (NEXT_PUBLIC_UPLOAD_TRANSPORT !== 's3') {
@@ -138,10 +138,10 @@ const getS3Client = () => {
     process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN && process.env.VERCEL
       ? awsCredentialsProvider({
           roleArn: process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN,
-        })
+        })()
       : undefined;
 
-  console.info('Vercel credentials', vercelCredentials);
+  console.info('Vercel credentials', await vercelCredentials);
 
   const credentials =
     vercelCredentials ??
@@ -158,6 +158,6 @@ const getS3Client = () => {
     endpoint: process.env.NEXT_PRIVATE_UPLOAD_ENDPOINT || undefined,
     forcePathStyle: process.env.NEXT_PRIVATE_UPLOAD_FORCE_PATH_STYLE === 'true',
     region: process.env.NEXT_PRIVATE_UPLOAD_REGION || 'us-east-1',
-    credentials,
+    credentials: await credentials,
   });
 };

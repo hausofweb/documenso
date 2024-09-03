@@ -131,22 +131,26 @@ const getS3Client = () => {
     process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID &&
     process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY;
 
-  const credentials = process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN
-    ? awsCredentialsProvider({
-        roleArn: process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN,
-      })
-    : undefined;
+  const vercelCredentials =
+    process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN && process.env.VERCEL
+      ? awsCredentialsProvider({
+          roleArn: process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN,
+        })
+      : undefined;
+
+  const credentials =
+    vercelCredentials ??
+    (hasCredentials
+      ? {
+          accessKeyId: String(process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID),
+          secretAccessKey: String(process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY),
+        }
+      : undefined);
 
   return new S3Client({
     endpoint: process.env.NEXT_PRIVATE_UPLOAD_ENDPOINT || undefined,
     forcePathStyle: process.env.NEXT_PRIVATE_UPLOAD_FORCE_PATH_STYLE === 'true',
     region: process.env.NEXT_PRIVATE_UPLOAD_REGION || 'us-east-1',
-    credentials:
-      hasCredentials || credentials
-        ? credentials ?? {
-            accessKeyId: String(process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID),
-            secretAccessKey: String(process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY),
-          }
-        : undefined,
+    credentials,
   });
 };

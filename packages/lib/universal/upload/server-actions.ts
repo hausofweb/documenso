@@ -10,7 +10,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import slugify from '@sindresorhus/slugify';
-import { awsCredentialsProvider } from '@vercel/functions/oidc';
+import { awsCredentialsProvider, getVercelOidcToken } from '@vercel/functions/oidc';
 import { type JWT, getToken } from 'next-auth/jwt';
 import { env } from 'next-runtime-env';
 import path from 'node:path';
@@ -134,37 +134,19 @@ const getS3Client = () => {
   console.info('NEXT_PRIVATE_AWS_ROLE_ARN', process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN);
   console.info('VERCEL', process.env.VERCEL);
 
-  const vercelCredentials =
-    process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN && process.env.VERCEL
-      ? awsCredentialsProvider({
-          roleArn: process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN,
-        })
-      : undefined;
+  const credentials = hasCredentials
+    ? {
+        accessKeyId: String(process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID),
+        secretAccessKey: String(process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY),
+      }
+    : undefined;
 
-  console.info('VERCEL_OIDC_TOKEN', process.env.VERCEL_OIDC_TOKEN);
-
-  console.info('Vercel Credentials', vercelCredentials);
   console.info(
-    'Vercel credentials',
-    vercelCredentials &&
-      JSON.stringify(
-        vercelCredentials().then(
-          (credentials) => credentials,
-          (error) => error,
-        ),
-        null,
-        2,
-      ),
+    'VERCEL ODIC TOKEN',
+    getVercelOidcToken()
+      .then((token) => token)
+      .catch((err) => err),
   );
-
-  const credentials =
-    vercelCredentials ??
-    (hasCredentials
-      ? {
-          accessKeyId: String(process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID),
-          secretAccessKey: String(process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY),
-        }
-      : undefined);
 
   console.info('S3 credentials', JSON.stringify(credentials, null, 2));
 
@@ -172,6 +154,11 @@ const getS3Client = () => {
     endpoint: process.env.NEXT_PRIVATE_UPLOAD_ENDPOINT || undefined,
     forcePathStyle: process.env.NEXT_PRIVATE_UPLOAD_FORCE_PATH_STYLE === 'true',
     region: process.env.NEXT_PRIVATE_UPLOAD_REGION || 'us-east-1',
-    credentials,
+    credentials:
+      process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN && process.env.VERCEL
+        ? awsCredentialsProvider({
+            roleArn: process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN,
+          })
+        : credentials,
   });
 };

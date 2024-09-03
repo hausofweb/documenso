@@ -131,12 +131,17 @@ const getS3Client = () => {
     process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID &&
     process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY;
 
+  console.info('NEXT_PRIVATE_AWS_ROLE_ARN', process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN);
+  console.info('VERCEL', process.env.VERCEL);
+
   const vercelCredentials =
     process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN && process.env.VERCEL
       ? awsCredentialsProvider({
           roleArn: process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN,
         })
       : undefined;
+
+  console.info('Vercel credentials', vercelCredentials);
 
   const credentials =
     vercelCredentials ??
@@ -146,6 +151,8 @@ const getS3Client = () => {
           secretAccessKey: String(process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY),
         }
       : undefined);
+
+  console.info('S3 credentials', credentials);
 
   return new S3Client({
     endpoint: process.env.NEXT_PRIVATE_UPLOAD_ENDPOINT || undefined,

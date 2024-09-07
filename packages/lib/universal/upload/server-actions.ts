@@ -126,39 +126,53 @@ const getS3Client = () => {
   if (NEXT_PUBLIC_UPLOAD_TRANSPORT !== 's3') {
     throw new Error('Invalid upload transport');
   }
-
-  const hasCredentials =
-    process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID &&
-    process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY;
-
-  console.info('NEXT_PRIVATE_AWS_ROLE_ARN', process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN);
-  console.info('VERCEL', process.env.VERCEL);
-
-  const credentials = hasCredentials
-    ? {
-        accessKeyId: String(process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID),
-        secretAccessKey: String(process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY),
-      }
-    : undefined;
-
-  console.info(
-    'VERCEL ODIC TOKEN',
-    getVercelOidcToken()
-      .then((token) => token)
-      .catch((err) => err),
-  );
-
-  console.info('S3 credentials', JSON.stringify(credentials, null, 2));
+  let credentials;
+  getCredentials()
+    .then((c) => {
+      console.log('Credentials resolved:', c);
+      credentials = c;
+    })
+    .catch((err) => {
+      console.error('Credentials error resolved:', err);
+    });
 
   return new S3Client({
     endpoint: process.env.NEXT_PRIVATE_UPLOAD_ENDPOINT || undefined,
     forcePathStyle: process.env.NEXT_PRIVATE_UPLOAD_FORCE_PATH_STYLE === 'true',
     region: process.env.NEXT_PRIVATE_UPLOAD_REGION || 'us-east-1',
-    credentials:
-      process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN && process.env.VERCEL
-        ? awsCredentialsProvider({
-            roleArn: process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN,
-          })
-        : credentials,
+    credentials,
   });
+};
+
+const getCredentials = async () => {
+  console.info('Getting credentials');
+
+  console.info('Vercel:', process.env.VERCEL);
+  console.info('Role ARN:', process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN);
+  console.info('Access Key ID:', process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID);
+
+  try {
+    const ODIC_TOKEN = await getVercelOidcToken();
+    console.log('OIDC Token:', ODIC_TOKEN);
+  } catch (err) {
+    console.error('OIDC Token error:', err);
+  }
+
+  if (process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN && process.env.VERCEL) {
+    return awsCredentialsProvider({
+      roleArn: process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN,
+    });
+  }
+
+  if (
+    process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID &&
+    process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY
+  ) {
+    return {
+      accessKeyId: process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID,
+      secretAccessKey: process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY,
+    };
+  }
+
+  return undefined;
 };

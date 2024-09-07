@@ -9,8 +9,9 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { createCredentialChain, fromEnv, fromWebToken } from '@aws-sdk/credential-providers';
 import slugify from '@sindresorhus/slugify';
-import { awsCredentialsProvider, getVercelOidcToken } from '@vercel/functions/oidc';
+import { getVercelOidcToken } from '@vercel/functions/oidc';
 import { type JWT, getToken } from 'next-auth/jwt';
 import { env } from 'next-runtime-env';
 import path from 'node:path';
@@ -20,7 +21,7 @@ import { ONE_HOUR, ONE_SECOND } from '../../constants/time';
 import { alphaid } from '../id';
 
 export const getPresignPostUrl = async (fileName: string, contentType: string) => {
-  const client = getS3Client();
+  const client = await getS3Client();
 
   const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
 
@@ -61,7 +62,7 @@ export const getPresignPostUrl = async (fileName: string, contentType: string) =
 };
 
 export const getAbsolutePresignPostUrl = async (key: string) => {
-  const client = getS3Client();
+  const client = await getS3Client();
 
   const { getSignedUrl: getS3SignedUrl } = await import('@aws-sdk/s3-request-presigner');
 
@@ -93,7 +94,7 @@ export const getPresignGetUrl = async (key: string) => {
     return { key, url };
   }
 
-  const client = getS3Client();
+  const client = await getS3Client();
 
   const { getSignedUrl: getS3SignedUrl } = await import('@aws-sdk/s3-request-presigner');
 
@@ -110,7 +111,7 @@ export const getPresignGetUrl = async (key: string) => {
 };
 
 export const deleteS3File = async (key: string) => {
-  const client = getS3Client();
+  const client = await getS3Client();
 
   await client.send(
     new DeleteObjectCommand({
@@ -120,60 +121,29 @@ export const deleteS3File = async (key: string) => {
   );
 };
 
-const getS3Client = () => {
+const getS3Client = async () => {
   const NEXT_PUBLIC_UPLOAD_TRANSPORT = env('NEXT_PUBLIC_UPLOAD_TRANSPORT');
 
   if (NEXT_PUBLIC_UPLOAD_TRANSPORT !== 's3') {
     throw new Error('Invalid upload transport');
   }
-  let credentials;
-  getCredentials()
-    .then((c) => {
-      console.log('Credentials resolved:', c);
-      credentials = c;
-    })
-    .catch((err) => {
-      console.error('Credentials error resolved:', err);
-    });
 
   return new S3Client({
     endpoint: process.env.NEXT_PRIVATE_UPLOAD_ENDPOINT || undefined,
     forcePathStyle: process.env.NEXT_PRIVATE_UPLOAD_FORCE_PATH_STYLE === 'true',
     region: process.env.NEXT_PRIVATE_UPLOAD_REGION || 'us-east-1',
-    credentials,
+    credentials: createCredentialChain(
+      process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN
+        ? fromWebToken({
+            roleArn: process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN,
+            durationSeconds: 3600,
+            logger: console,
+            webIdentityToken: await getVercelOidcToken(),
+          })
+        : fromEnv({
+            logger: console,
+          }),
+    ),
     logger: console,
   });
-};
-
-const getCredentials = async () => {
-  console.info('Getting credentials');
-
-  console.info('Vercel:', process.env.VERCEL);
-  console.info('Role ARN:', process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN);
-  console.info('Access Key ID:', process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID);
-
-  try {
-    const ODIC_TOKEN = await getVercelOidcToken();
-    console.log('OIDC Token:', ODIC_TOKEN);
-  } catch (err) {
-    console.error('OIDC Token error:', err);
-  }
-
-  if (process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN && process.env.VERCEL) {
-    return awsCredentialsProvider({
-      roleArn: process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN,
-    });
-  }
-
-  if (
-    process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID &&
-    process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY
-  ) {
-    return {
-      accessKeyId: process.env.NEXT_PRIVATE_UPLOAD_ACCESS_KEY_ID,
-      secretAccessKey: process.env.NEXT_PRIVATE_UPLOAD_SECRET_ACCESS_KEY,
-    };
-  }
-
-  return undefined;
 };

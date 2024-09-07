@@ -118,6 +118,7 @@
     "CI",
     "VERCEL",
     "VERCEL_ENV",
+    "VERCEL_OIDC_TOKEN",
     "VERCEL_URL",
     "NODE_ENV",
     "DEPLOYMENT_TARGET",

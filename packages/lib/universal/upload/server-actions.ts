@@ -137,13 +137,9 @@ const getS3Client = async () => {
         ? fromWebToken({
             roleArn: process.env.NEXT_PRIVATE_UPLOAD_AWS_ROLE_ARN,
             durationSeconds: 3600,
-            logger: console,
             webIdentityToken: await getVercelOidcToken(),
           })
-        : fromEnv({
-            logger: console,
-          }),
+        : fromEnv(),
     ),
-    logger: console,
   });
 };

@@ -141,6 +141,7 @@ const getS3Client = () => {
     forcePathStyle: process.env.NEXT_PRIVATE_UPLOAD_FORCE_PATH_STYLE === 'true',
     region: process.env.NEXT_PRIVATE_UPLOAD_REGION || 'us-east-1',
     credentials,
+    logger: console,
   });
 };
 

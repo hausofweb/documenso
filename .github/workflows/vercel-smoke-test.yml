@@ -1,0 +1,21 @@
+name: Vercel smoke test
+
+on: deployment_status
+
+permissions: {}
+
+jobs:
+  smoke:
+    # Vercel names the environments `Production` and, for the custom one, its slug.
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      contains(fromJSON('["Production", "staging"]'), github.event.deployment.environment)
+    runs-on: ubuntu-latest
+    env:
+      # The custom hostnames, not the deployment URL: *.vercel.app URLs sit behind Vercel Authentication.
+      BASE_URL: ${{ github.event.deployment.environment == 'Production' && 'https://sign.barrettpenrod.com' || 'https://sign.bpvs.hausofwebstage.dev' }}
+    steps:
+      - name: Health check passes
+        run: curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-all-errors "$BASE_URL/api/health" | jq -e '.status == "ok"'
+      - name: Signing certificate is loaded
+        run: curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-all-errors "$BASE_URL/api/certificate-status" | jq -e '.isAvailable == true'

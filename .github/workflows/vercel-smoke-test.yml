@@ -12,10 +12,19 @@ jobs:
       contains(fromJSON('["Production", "staging"]'), github.event.deployment.environment)
     runs-on: ubuntu-latest
     env:
-      # The custom hostnames, not the deployment URL: *.vercel.app URLs sit behind Vercel Authentication.
-      BASE_URL: ${{ github.event.deployment.environment == 'Production' && 'https://sign.barrettpenrod.com' || 'https://sign.bpvs.hausofwebstage.dev' }}
+      BASE_URL: ${{ github.event.deployment_status.environment_url }}
     steps:
       - name: Health check passes
-        run: curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-all-errors "$BASE_URL/api/health" | jq -e '.status == "ok"'
+        run: |
+          for attempt in 1 2 3 4 5; do
+            curl --fail --silent --show-error "$BASE_URL/api/health" | jq -e '.status == "ok"' && exit 0
+            sleep 10
+          done
+          exit 1
       - name: Signing certificate is loaded
-        run: curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-all-errors "$BASE_URL/api/certificate-status" | jq -e '.isAvailable == true'
+        run: |
+          for attempt in 1 2 3 4 5; do
+            curl --fail --silent --show-error "$BASE_URL/api/certificate-status" | jq -e '.isAvailable == true' && exit 0
+            sleep 10
+          done
+          exit 1

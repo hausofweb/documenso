@@ -23,8 +23,9 @@ jobs:
 
       - uses: ./.github/actions/node-install
 
+      # Everything but minio: its image is gone from Docker Hub, and the tests store uploads in the database.
       - name: Start Services
-        run: npm run dx:up
+        run: docker compose -f docker/development/compose.yml up -d database inbucket redis gotenberg
 
       - uses: ./.github/actions/playwright-install
 

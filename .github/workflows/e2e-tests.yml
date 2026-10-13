@@ -11,9 +11,16 @@ concurrency:
 
 jobs:
   e2e_tests:
-    name: 'E2E Tests'
+    name: 'E2E Tests (${{ matrix.shard }}/12)'
     timeout-minutes: 60
-    runs-on: warp-ubuntu-2204-x64-8x
+    # Upstream's WarpBuild runner isn't available to this fork, so the job would queue forever.
+    # On a 4-vCPU GitHub-hosted runner the ui project gets one worker (calculateWorkers in
+    # playwright.config.ts), so the suite is spread across twelve shards instead.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     steps:
       - uses: actions/checkout@v4
 
@@ -22,8 +29,9 @@ jobs:
 
       - uses: ./.github/actions/node-install
 
+      # Everything but minio: its image is gone from Docker Hub, and the tests store uploads in the database.
       - name: Start Services
-        run: npm run dx:up
+        run: docker compose -f docker/development/compose.yml up -d --wait database inbucket redis gotenberg
 
       - uses: ./.github/actions/playwright-install
 
@@ -36,17 +44,22 @@ jobs:
       - name: Install playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Build the app
+        run: npx turbo run build --filter=@documenso/remix
+
+      # Called outside turbo: its strict env mode would drop E2E_TEST_PATH, which carries the shard.
       - name: Run Playwright tests
-        run: npm run ci
+        run: npm run test:e2e -w @documenso/app-tests
         env:
           # Needed since we use next start which will set the NODE_ENV to production
           NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH: './example/cert.p12'
           DANGEROUS_BYPASS_RATE_LIMITS: 'true'
+          E2E_TEST_PATH: '--shard=${{ matrix.shard }}/12'
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results
+          name: test-results-${{ matrix.shard }}
           path: 'packages/app-tests/**/test-results/*'
           retention-days: 7
     env:

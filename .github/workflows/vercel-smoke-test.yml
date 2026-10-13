@@ -1,0 +1,34 @@
+name: Vercel smoke test
+
+on: deployment_status
+
+permissions: {}
+
+jobs:
+  smoke:
+    # Vercel names the environments `Production` and, for the custom one, its slug.
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      contains(fromJSON('["Production", "staging"]'), github.event.deployment.environment)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # An explicit bash shell adds pipefail, so a failed curl fails the check even if jq succeeds.
+        shell: bash
+    env:
+      BASE_URL: ${{ github.event.deployment_status.environment_url }}
+    steps:
+      - name: Health check passes
+        run: |
+          for attempt in 1 2 3 4 5; do
+            curl --fail --silent --show-error --max-time 30 "$BASE_URL/api/health" | jq -e '.status == "ok"' && exit 0
+            sleep 10
+          done
+          exit 1
+      - name: Signing certificate is loaded
+        run: |
+          for attempt in 1 2 3 4 5; do
+            curl --fail --silent --show-error --max-time 30 "$BASE_URL/api/certificate-status" | jq -e '.isAvailable == true' && exit 0
+            sleep 10
+          done
+          exit 1

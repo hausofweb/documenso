@@ -11,6 +11,10 @@ jobs:
       github.event.deployment_status.state == 'success' &&
       contains(fromJSON('["Production", "staging"]'), github.event.deployment.environment)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        # An explicit bash shell adds pipefail, so a failed curl fails the check even if jq succeeds.
+        shell: bash
     env:
       BASE_URL: ${{ github.event.deployment_status.environment_url }}
     steps:

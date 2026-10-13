@@ -11,15 +11,16 @@ concurrency:
 
 jobs:
   e2e_tests:
-    name: 'E2E Tests (${{ matrix.shard }}/4)'
+    name: 'E2E Tests (${{ matrix.shard }}/12)'
     timeout-minutes: 60
     # Upstream's WarpBuild runner isn't available to this fork, so the job would queue forever.
-    # A GitHub-hosted runner has too few cores to finish the suite in one job, so it's sharded.
+    # On a 4-vCPU GitHub-hosted runner the ui project gets one worker (calculateWorkers in
+    # playwright.config.ts), so the suite is spread across twelve shards instead.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     steps:
       - uses: actions/checkout@v4
 
@@ -53,7 +54,7 @@ jobs:
           # Needed since we use next start which will set the NODE_ENV to production
           NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH: './example/cert.p12'
           DANGEROUS_BYPASS_RATE_LIMITS: 'true'
-          E2E_TEST_PATH: '--shard=${{ matrix.shard }}/4'
+          E2E_TEST_PATH: '--shard=${{ matrix.shard }}/12'
 
       - uses: actions/upload-artifact@v4
         if: always()

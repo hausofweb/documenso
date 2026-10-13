@@ -17,14 +17,14 @@ jobs:
       - name: Health check passes
         run: |
           for attempt in 1 2 3 4 5; do
-            curl --fail --silent --show-error "$BASE_URL/api/health" | jq -e '.status == "ok"' && exit 0
+            curl --fail --silent --show-error --max-time 30 "$BASE_URL/api/health" | jq -e '.status == "ok"' && exit 0
             sleep 10
           done
           exit 1
       - name: Signing certificate is loaded
         run: |
           for attempt in 1 2 3 4 5; do
-            curl --fail --silent --show-error "$BASE_URL/api/certificate-status" | jq -e '.isAvailable == true' && exit 0
+            curl --fail --silent --show-error --max-time 30 "$BASE_URL/api/certificate-status" | jq -e '.isAvailable == true' && exit 0
             sleep 10
           done
           exit 1

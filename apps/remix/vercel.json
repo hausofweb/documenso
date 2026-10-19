@@ -8,7 +8,7 @@
   "functions": {
     "api/server.js": {
       "maxDuration": 300,
-      "includeFiles": "build/server/**"
+      "includeFiles": "{build/server/**,public/fonts/**,public/static/**}"
     }
   },
   "headers": [
